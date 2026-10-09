@@ -120,6 +120,22 @@ Reasoning runs on the laptop. Speech recordings and spoken-response text use the
 
 ## Get started
 
+### Everyday startup: already installed on your phone
+
+1. Connect the phone to this Windows laptop with a **USB data cable** and unlock it. Leave USB debugging enabled; approve Android's debugging prompt if it appears.
+2. Double-click **[Start-HandsFree.bat](Start-HandsFree.bat)** in this project folder. It starts missing local services, checks the model, restores the USB connection and opens HandsFree on the phone. Existing healthy services are reused.
+3. In HandsFree, check **Settings → Screen access is on**, choose **English / Kannada**, then tap **Start conversation** once. Approve microphone access if Android asks.
+
+**Android Studio, Cursor and a terminal do not need to stay open.** You may close the launcher window after it says Ready. Keep the laptop powered on and awake, the USB cable connected, and internet available for voice and online apps. Do not close the laptop lid if that puts it to sleep.
+
+If you only close HandsFree while the laptop services and USB connection remain active, reopen its phone icon and start a new conversation. After a laptop restart or USB reconnection, run the batch file again. It does not rebuild or reinstall the app and does not automatically resume an old task.
+
+Before ending a session, use **Stop conversation**. If screen access says disconnected even with its Android toggle on, switch HandsFree AI off and on under **Accessibility → Downloaded apps / Installed services** and approve Android's prompt yourself. The launcher never grants permissions. No administrator window is required.
+
+For a different phone, use `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\start-local.ps1 -DeviceId YOUR_DEVICE_ID -OpenApp` after installing the app. The batch file defaults to the development OnePlus, `2a7a1d50`.
+
+The setup below is only needed for a new laptop or a missing installation.
+
 ### 1. Prepare the laptop
 
 | Requirement | Development setup |
@@ -150,6 +166,14 @@ Create **.env.local** using **[.env.example](.env.example)** as the template. Co
 Configuration priority: process environment → .env.local → .env.
 
 ### 2. Start the local backend
+
+For the USB demo, double-click **Start-HandsFree.bat**, or run this from the project folder. It starts missing Ollama/backend processes in the background, restores the phone connection and checks model availability:
+
+~~~powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\start-local.ps1
+~~~
+
+Run it again after restarting the laptop or reconnecting USB. Keep the laptop awake. The app checks the connection automatically while visible. To run the backend in a terminal instead:
 
 ~~~powershell
 .\.venv\Scripts\python.exe -m backend.run

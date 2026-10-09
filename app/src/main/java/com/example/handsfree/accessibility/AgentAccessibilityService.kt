@@ -33,7 +33,7 @@ object ServiceConnection {
 
 class AgentAccessibilityService : AccessibilityService() {
     private val nodeHandles = mutableMapOf<String, AccessibilityNodeInfo>()
-    private var lastFingerprint = ""
+    private var lastFingerprint: ScreenFingerprint? = null
     private var snapshot: ScreenObservation? = null
     private var panel: LinearLayout? = null
     private var statusText: TextView? = null
@@ -133,7 +133,23 @@ class AgentAccessibilityService : AccessibilityService() {
         if (root == null) blocked = "No accessible screen. Unlock the phone and open an app."
         else if (packageName != this.packageName && packageName in approvedPackages) visit(root, 0)
         if (blocked != null) { elements.clear(); nodeHandles.clear() }
-        val fingerprint = "$packageName|${root?.windowId}|$blocked|$elements"
+        val fingerprint = ScreenFingerprint.from(packageName, root?.windowId, blocked, elements)
+        if (com.example.handsfree.BuildConfig.DEBUG && snapshot != null && fingerprint != lastFingerprint) {
+            val previous = snapshot!!.elements.associateBy { it.id }
+            val changes = elements.mapNotNull { element ->
+                val old = previous[element.id] ?: return@mapNotNull "${element.id}:added"
+                val fields = buildList {
+                    if (old.text != element.text) add("text")
+                    if (old.description != element.description) add("description")
+                    if (old.bounds != element.bounds) add("bounds")
+                    if (old.actions != element.actions) add("actions")
+                    if (old.role != element.role || old.editable != element.editable) add("role")
+                }
+                if (fields.isEmpty()) null else "${element.id}:${fields.joinToString("+")}"
+            }
+            // Field names only: no screen values or user input in Logcat.
+            android.util.Log.d("HandsFreeAgent", "observation_change fields=${changes.take(20)} count=${snapshot!!.elements.size}->${elements.size} sameElements=${snapshot!!.elements == elements}")
+        }
         val id = if (fingerprint == lastFingerprint) snapshot?.id ?: UUID.randomUUID().toString()
                  else UUID.randomUUID().toString()
         lastFingerprint = fingerprint

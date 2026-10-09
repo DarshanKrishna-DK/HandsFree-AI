@@ -34,7 +34,7 @@ class BackendClient {
             .put("allowed_actions", JSONArray(if (screen.blockedReason != null) listOf("ask_user", "stop_task") else SafetyPolicyEngine.actions.toList()))
             .put("history", JSONArray(history.takeLast(30).map { JSONObject().put("action", it.action).put("result", it.result.take(500)) }))
             .put("constraints", JSONArray(constraints.takeLast(20)))
-            .put("previous_action_result", history.lastOrNull()?.result ?: JSONObject.NULL)
+            .put("previous_action_result", ActionMemory.previousResult(history) ?: JSONObject.NULL)
         return decode(JSONObject(request("/agent/next-action", payload.toString().toRequestBody("application/json".toMediaType()))))
     }
 

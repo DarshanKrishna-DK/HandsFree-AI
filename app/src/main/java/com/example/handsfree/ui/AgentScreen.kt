@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.handsfree.BuildConfig
 import com.example.handsfree.R
 import com.example.handsfree.accessibility.ServiceConnection
@@ -39,6 +40,7 @@ import com.example.handsfree.apps.AppDiscoveryManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -93,12 +95,18 @@ fun AgentScreen(modifier: Modifier = Modifier) {
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME && controller.pending?.clarification == true) service?.hidePanel()
-            if (event == Lifecycle.Event.ON_RESUME) controller.checkConnection()
         }
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(Unit) { controller.checkConnection() }
+    LaunchedEffect(owner) {
+        owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (isActive) {
+                controller.checkConnection()
+                delay(5_000)
+            }
+        }
+    }
     val status = when {
         voice.recording -> context.uiText(R.string.listening_to_you)
         voice.busy -> context.uiText(R.string.understanding_reply)
@@ -167,7 +175,10 @@ fun AgentScreen(modifier: Modifier = Modifier) {
                         Button(onClick = { disclose = true }) { Text(context.uiText(R.string.screen_setup)) }
                     }
                 }
-                if (!controller.connected) TextButton(onClick = { controller.checkConnection() }) { Text(context.uiText(R.string.reconnect)) }
+                if (!controller.connected) {
+                    Text(context.uiText(R.string.connection_help), style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { controller.checkConnection() }) { Text(context.uiText(R.string.reconnect)) }
+                }
                 controller.conversation.forEach { entry ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (entry.fromUser) Arrangement.End else Arrangement.Start) {
                         Surface(Modifier.widthIn(max = 340.dp), shape = RoundedCornerShape(20.dp),

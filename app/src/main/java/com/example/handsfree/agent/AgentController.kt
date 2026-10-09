@@ -47,20 +47,27 @@ class AgentController(private val context: Context) {
     var lastAction by mutableStateOf(""); private set
     var conversation by mutableStateOf<List<ConversationMessage>>(emptyList()); private set
     var connected by mutableStateOf(false); private set
+    private var connectionJob: Job? = null
     private fun chat(text: String, fromUser: Boolean = false) {
         conversation = (conversation + ConversationMessage(text, fromUser)).takeLast(30)
     }
     val running get() = status.isRunning
 
-    fun checkConnection() { scope.launch {
+    fun checkConnection() {
+        if (connectionJob?.isActive == true) return
+        connectionJob = scope.launch {
         connection = "Checking…"
         try {
-            val health = backend.health()
+            val health = withTimeout(6_000) { backend.health() }
             voiceConfigured = health.optBoolean("voice_configured")
             connected = true
             connection = "Laptop connected · ${health.optString("model")}"
-        } catch (error: Exception) { connected = false; connection = error.message ?: "Connection failed" }
-    } }
+        } catch (_: TimeoutCancellationException) {
+            connected = false; voiceConfigured = false; connection = "Local backend connection timed out."
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) { connected = false; voiceConfigured = false; connection = error.message ?: "Connection failed" }
+        }
+    }
     private fun update(state: AgentStatus, text: String) {
         status = state; message = text
         if (com.example.handsfree.BuildConfig.DEBUG) android.util.Log.d("HandsFreeAgent", "state=${state.name}")
@@ -186,7 +193,7 @@ class AgentController(private val context: Context) {
         }
     }
 
-    private suspend fun prepareFood(apps: List<LaunchableApp>, service: AgentAccessibilityService): Boolean {
+    private suspend fun prepareFood(apps: List<LaunchableApp>, service: AgentAccessibilityService, navigator: TaskAppNavigator): Boolean {
         val intake = FoodIntake(goal)
         val candidates = apps.filter { it.packageName in FoodIntake.foodPackages }
         if (candidates.isEmpty()) {
@@ -218,6 +225,7 @@ class AgentController(private val context: Context) {
         var checks = 0
         while (observed.packageName != chosen.packageName && checks++ < 12) { delay(400); observed = service.observe() }
         check(observed.packageName == chosen.packageName) { "Please open ${chosen.name}, then try again." }
+        navigator.rememberOpened(chosen.packageName)
         while (true) {
             val question = intake.next() ?: break
             val questionText = when (question.key) {
@@ -254,6 +262,7 @@ class AgentController(private val context: Context) {
         job = scope.launch {
             val taskId = UUID.randomUUID().toString()
             val guard = LoopGuard()
+            val navigator = TaskAppNavigator(context.packageName)
             var noChanges = 0
             var modelFailures = 0
             var cartHandoff = false
@@ -262,12 +271,20 @@ class AgentController(private val context: Context) {
                 service.showPanel(context.uiText(R.string.preparing_task))
                 backend.health()
                 var apps = withContext(Dispatchers.IO) { discovery.discover() }
-                if (FoodIntake.applies(goal) && !prepareFood(apps, service)) { stop(); return@launch }
+                if (FoodIntake.applies(goal) && !prepareFood(apps, service, navigator)) { stop(); return@launch }
                 repeat(60) {
                     ensureActive()
                     update(AgentStatus.OBSERVING, context.uiText(R.string.observing))
                     service.approvedPackages = approvedApps.toSet()
-                    val before = service.observe()
+                    val before = navigator.observeForPlanning(approvedApps.toSet(), service::observe,
+                        open = { packageName, screen ->
+                            val appName = apps.find { it.packageName == packageName }?.name ?: packageName
+                            update(AgentStatus.EXECUTING, context.uiText(R.string.returning_to_app, appName))
+                            val outcome = service.execute(ProposedAction("open_app", screen.id,
+                                arguments = ActionArguments(packageName = packageName)), approvedApps)
+                            record("resume_app", "$packageName: ${outcome.message}")
+                            outcome
+                        }, settle = { delay(400) })
                     if (before.blockedReason != null) {
                         VoiceController.get(context).endSession()
                         error(before.blockedReason)
@@ -374,10 +391,7 @@ class AgentController(private val context: Context) {
                         else -> {
                             update(AgentStatus.EXECUTING, action.reason)
                             val outcome = service.execute(action, approvedApps, confirmed)
-                            val target = current.elements.find { it.id == action.targetId }
-                            val detail = target?.let { " Target ${it.id}: ${it.text.ifBlank { it.description }.take(100)}." }
-                                ?: action.arguments.packageName?.let { " Package: $it." }.orEmpty()
-                            record(action.action, outcome.message + detail)
+                            record(action.action, ActionMemory.executionResult(action, current, outcome))
                             update(AgentStatus.VERIFYING, context.uiText(R.string.checking_screen))
                             delay(700)
                             ensureActive()
@@ -392,6 +406,8 @@ class AgentController(private val context: Context) {
                                 }
                             }
                             val launched = apps.find { it.packageName == action.arguments.packageName }
+                            if (outcome.accepted && action.action == "open_app" && launched != null && after.packageName == launched.packageName)
+                                navigator.rememberOpened(launched.packageName)
                             if (outcome.accepted && action.action == "open_app" && launched != null &&
                                 after.packageName == launched.packageName &&
                                 AppGoalVerifier.isLaunchOnly(goal, launched.name, launched.packageName)) {

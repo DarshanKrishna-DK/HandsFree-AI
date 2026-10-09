@@ -41,6 +41,8 @@ class SafetyPolicyEngine {
                     isProtected(action.arguments.text))) return deny("Text entry is not permitted here")
             if (action.action == "type_text" && screen.packageName in calculatorPackages)
                 return deny("Use Calculator keys; replacing its display does not reliably evaluate an expression")
+            if (action.action == "type_text" && node.text == action.arguments.text)
+                return deny("The field already contains the requested text. Inspect current results and choose the next supported action, or ask the user if the next step is unclear.")
             if (action.action == "scroll" && action.arguments.direction !in setOf("forward", "backward")) return deny("Invalid scroll direction")
         } else if (action.targetId != null) return deny("Unexpected target")
         if (action.arguments.evidenceIds.any { id -> screen.elements.none { it.id == id } }) return deny("Evidence is not on this screen")

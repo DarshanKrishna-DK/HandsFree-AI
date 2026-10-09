@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="returning_to_app">%1$s ಗೆ ಹಿಂತಿರುಗುತ್ತಿದ್ದೇನೆ…</string>
+    <string name="connection_help">ಫೋನನ್ನು USB ಮೂಲಕ ಸಂಪರ್ಕಿಸಿ ಮತ್ತು ಲ್ಯಾಪ್‌ಟಾಪ್‌ನಲ್ಲಿ HandsFree ಪ್ರಾರಂಭಿಸಿ. ಸಿದ್ಧವಾದಾಗ ಸಂಪರ್ಕವು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಮರುಸ್ಥಾಪನೆಯಾಗುತ್ತದೆ.</string>
     <string name="settings">ಸೆಟ್ಟಿಂಗ್‌ಗಳು</string>
     <string name="home">ಮುಖಪುಟ</string>
     <string name="assistant">ಸಹಾಯಕ</string>

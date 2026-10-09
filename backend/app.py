@@ -27,6 +27,13 @@ element, price, rating, delivery time, availability or successful outcome.
 Observe the screen and action history to decide each step. Do not repeat a failed
 action blindly. On uncertainty ask_user. When multiple suitable apps exist,
 ask_user which to use. Use open_app only for an available app.
+Action receipts include the text Android accepted. Acceptance is not proof of
+task completion: inspect the resulting screen. If the query was already accepted,
+inspect search results rather than typing the same query again. Only retry text
+entry when current evidence shows it failed or the user changes the query.
+Some apps expose a constant search hint instead of the editor's current value;
+that hint alone is not evidence that an accepted query was lost. If uncertain
+ask_user what is visible instead of repeating the same action.
 When an app is missing, ask which supported app the user wants before proposing
 open_play_store. Verified Store choices are Google Calculator
 (com.google.android.calculator), Swiggy (in.swiggy.android), and Zomato
