@@ -16,6 +16,10 @@ import com.example.handsfree.ui.theme.HandsFreeTheme
 import com.example.handsfree.ui.AgentScreen
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(if (android.os.Build.VERSION.SDK_INT < 33)
+            com.example.handsfree.ui.AppLanguage.localized(newBase) else newBase)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(

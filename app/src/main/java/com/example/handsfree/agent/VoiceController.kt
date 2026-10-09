@@ -1,5 +1,7 @@
 package com.example.handsfree.agent
 
+import com.example.handsfree.ui.uiText
+import com.example.handsfree.R
 import android.Manifest
 import android.app.KeyguardManager
 import android.content.Context
@@ -8,6 +10,8 @@ import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.os.Build
+import android.os.SystemClock
+import com.example.handsfree.ui.AppLanguage
 import android.util.Base64
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
@@ -43,7 +47,7 @@ class VoiceController private constructor(private val context: Context) {
     var recording by mutableStateOf(false); private set
     var busy by mutableStateOf(false); private set
     var message by mutableStateOf(""); private set
-    var language by mutableStateOf("en-IN")
+    val language get() = AppLanguage.code(context)
     var spokenResponses by mutableStateOf(true)
 
     fun hasPermission() = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
@@ -62,7 +66,7 @@ class VoiceController private constructor(private val context: Context) {
                     var failures = 0
                     while (isActive && sessionActive && session == sessionGeneration) {
                         if (context.getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
-                            message = "Conversation ended because the phone is locked."
+                            message = context.uiText(R.string.locked)
                             break
                         }
                         if (speaking) { delay(100); continue }
@@ -72,45 +76,48 @@ class VoiceController private constructor(private val context: Context) {
                         }
                         val controller = AgentController.get(context)
                         val revision = controller.voiceRevision
+                        val capturedLanguage = language
                         val file = try { captureSpeech() }
                         catch (cancelled: CancellationException) { throw cancelled }
                         catch (_: Exception) {
-                            if (++failures >= 3) { message = "Microphone unavailable. You can use typing."; break }
+                            if (++failures >= 3) { message = context.uiText(R.string.mic_unavailable); break }
                             delay(1000); continue
                         }
                         if (file == null) { delay(150); continue }
                         try {
                             busy = true
-                            message = "Understanding your words…"
+                            message = context.uiText(R.string.transcribing)
                             val encoded = withContext(Dispatchers.IO) { Base64.encodeToString(file.readBytes(), Base64.NO_WRAP) }
-                            val body = JSONObject().put("audio_base64", encoded).put("language_code", language)
+                            val body = JSONObject().put("audio_base64", encoded).put("language_code", capturedLanguage)
+                            val sentAt = SystemClock.elapsedRealtime()
                             val result = withTimeout(30_000) {
                                 JSONObject(backend.request("/voice/transcribe", body.toString().toRequestBody("application/json".toMediaType())))
                             }
                             ensureActive()
-                            if (session == sessionGeneration) {
+                            if (session == sessionGeneration && capturedLanguage == language) {
+                                if (com.example.handsfree.BuildConfig.DEBUG) android.util.Log.d("HandsFreeVoice", "transcription_ms=${SystemClock.elapsedRealtime() - sentAt}")
                                 lastTranscript = result.getString("transcript").trim()
                                 busy = false
                                 failures = 0
-                                message = "Heard: $lastTranscript"
+                                message = context.uiText(R.string.heard, lastTranscript)
                                 controller.receiveVoice(lastTranscript, revision)
                             }
                         } catch (_: TimeoutCancellationException) {
-                            message = "Voice took too long. Please try again."
+                            message = context.uiText(R.string.voice_timeout)
                             if (++failures >= 3) break
                         } catch (cancelled: CancellationException) { throw cancelled }
                         catch (_: Exception) {
-                            message = "I couldn't understand that. Please try again."
-                            if (++failures >= 3) { message = "Voice connection unavailable. You can use typing."; break }
+                            message = context.uiText(R.string.not_understood)
+                            if (++failures >= 3) { message = context.uiText(R.string.voice_unavailable); break }
                             delay(1500)
                         } finally { file.delete(); if (session == sessionGeneration) busy = false }
                         delay(150)
                     }
-                } catch (_: TimeoutCancellationException) { message = "Voice could not start. Please try again." }
+                } catch (_: TimeoutCancellationException) { message = context.uiText(R.string.voice_start_failed) }
                 finally { if (session == sessionGeneration) closeSession(clearMessage = false) }
             }
             true
-        } catch (_: Exception) { message = "Voice could not start. You can continue by typing."; false }
+        } catch (_: Exception) { message = context.uiText(R.string.voice_type_fallback); false }
     }
 
     /** Silence is discarded locally. Segments automatically restart until the user ends the session. */
@@ -131,21 +138,21 @@ class VoiceController private constructor(private val context: Context) {
             capture.setAudioEncodingBitRate(64000)
             capture.setOutputFile(file.absolutePath)
             capture.prepare(); capture.start()
-            recording = true; message = "Listening…"; onListeningChanged?.invoke(true)
-            var speech = false
-            var quiet = 0
-            var ticks = 0
-            while (epoch == captureGeneration && sessionActive && !speaking && ticks < 120) {
-                delay(200); ticks++
+            recording = true; message = context.uiText(R.string.listening); onListeningChanged?.invoke(true)
+            val endpoint = SpeechEndpoint(SystemClock.elapsedRealtime())
+            while (epoch == captureGeneration && sessionActive && !speaking) {
+                delay(100)
                 if (epoch != captureGeneration) return null
                 if (context.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return null
-                if (capture.maxAmplitude > 900) { speech = true; quiet = 0 } else quiet++
-                if ((speech && quiet >= 8 && ticks >= 8) || (!speech && ticks >= 40)) break
+                val now = SystemClock.elapsedRealtime()
+                if (endpoint.sample(now, capture.maxAmplitude)) break
+                message = if (endpoint.hasSpeech && endpoint.secondsRemaining(now) < 5)
+                    context.uiText(R.string.pause_countdown, endpoint.secondsRemaining(now)) else context.uiText(R.string.listening)
             }
             if (epoch != captureGeneration || !sessionActive || speaking) return null
             capture.stop()
-            delivered = speech
-            return if (speech) file else null
+            delivered = endpoint.hasSpeech
+            return if (endpoint.hasSpeech) file else null
         } finally {
             if (recorder === capture) {
                 runCatching { capture.release() }; recorder = null; recordingFile = null
@@ -194,13 +201,13 @@ class VoiceController private constructor(private val context: Context) {
                 player = MediaPlayer().apply {
                     setDataSource(file.absolutePath)
                     setOnCompletionListener { stopPlayback() }
-                    setOnErrorListener { _, _, _ -> stopPlayback(); message = "Audio unavailable. Read the text response."; true }
+                    setOnErrorListener { _, _, _ -> stopPlayback(); message = context.uiText(R.string.audio_unavailable); true }
                     prepare(); start()
                 }
             } catch (_: TimeoutCancellationException) {
-                stopPlayback(); message = "Audio unavailable. Read the text response."
+                stopPlayback(); message = context.uiText(R.string.audio_unavailable)
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { stopPlayback(); message = "Audio unavailable. Read the text response." }
+            catch (_: Exception) { stopPlayback(); message = context.uiText(R.string.audio_unavailable) }
         }
     }
     fun stopPlayback() {

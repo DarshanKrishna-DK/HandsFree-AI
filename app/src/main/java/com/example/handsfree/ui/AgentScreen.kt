@@ -1,6 +1,8 @@
 ﻿package com.example.handsfree.ui
 
+import com.example.handsfree.ui.uiText
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -47,6 +49,12 @@ fun AgentScreen(modifier: Modifier = Modifier) {
     val service = ServiceConnection.service
     val scope = rememberCoroutineScope()
     val preferences = remember { context.getSharedPreferences("conversation", 0) }
+    fun selectLanguage(code: String) {
+        if (controller.running || voice.language == code) return
+        voice.endSession()
+        controller.newConversation()
+        AppLanguage.select(context as Activity, code)
+    }
     var tab by rememberSaveable { mutableStateOf("Assistant") }
     var instruction by rememberSaveable { mutableStateOf(controller.goal) }
     var answer by rememberSaveable { mutableStateOf("") }
@@ -66,7 +74,8 @@ fun AgentScreen(modifier: Modifier = Modifier) {
         when (voiceAction) {
             "start" -> controller.start(instruction)
             "reply" -> controller.listenAgain()
-            else -> voice.ask("I'm listening. What would you like to do? You can say home, new task, or stop conversation at any time while I'm listening.")
+            // beginSession starts listening immediately; do not wait for a network-generated greeting.
+            else -> Unit
         }
     }
     val microphone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -91,37 +100,47 @@ fun AgentScreen(modifier: Modifier = Modifier) {
     }
     LaunchedEffect(Unit) { controller.checkConnection() }
     val status = when {
-        voice.recording -> "Listening to you"
-        voice.busy -> "Understanding your reply"
-        voice.speaking -> "Speaking"
-        controller.status == AgentStatus.WAITING_FOR_USER -> "Your turn"
-        controller.status == AgentStatus.COMPLETED -> "All done"
-        controller.status == AgentStatus.FAILED -> "Let's try again"
-        controller.running -> "Working on it"
-        service == null -> "One quick setup step"
-        !controller.connected -> "Connection needs attention"
-        else -> "Ready to help"
+        voice.recording -> context.uiText(R.string.listening_to_you)
+        voice.busy -> context.uiText(R.string.understanding_reply)
+        voice.speaking -> context.uiText(R.string.speaking)
+        controller.status == AgentStatus.WAITING_FOR_USER -> context.uiText(R.string.your_turn)
+        controller.status == AgentStatus.COMPLETED -> context.uiText(R.string.all_done)
+        controller.status == AgentStatus.FAILED -> context.uiText(R.string.try_again)
+        controller.running -> context.uiText(R.string.working)
+        service == null -> context.uiText(R.string.setup_step)
+        !controller.connected -> context.uiText(R.string.connection_attention)
+        else -> context.uiText(R.string.ready)
     }
     Column(modifier) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Image(painterResource(R.drawable.handsfree_logo), "HandsFree logo", Modifier.size(44.dp))
             Spacer(Modifier.width(10.dp))
             Text("HandsFree", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            TextButton(onClick = { settings = true }) { Text("Settings") }
+            TextButton(onClick = { settings = true }) { Text(context.uiText(R.string.settings)) }
         }
         Row(Modifier.padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { controller.newConversation(); tab = "Assistant" }) { Text("Home") }
+            TextButton(onClick = { controller.newConversation(); tab = "Assistant" }) { Text(context.uiText(R.string.home)) }
             listOf("Assistant", "Your apps").forEach { title ->
-                FilterChip(selected = tab == title, onClick = { tab = title }, label = { Text(title) })
+                FilterChip(selected = tab == title, onClick = { tab = title }, label = { Text(context.uiText(if (title == "Assistant") R.string.assistant else R.string.your_apps)) })
             }
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(context.uiText(R.string.language), style = MaterialTheme.typography.labelLarge)
+            FilterChip(selected = voice.language == "en-IN", enabled = !controller.running,
+                onClick = { selectLanguage("en-IN") }, label = { Text("English") })
+            FilterChip(selected = voice.language == "kn-IN", enabled = !controller.running,
+                onClick = { selectLanguage("kn-IN") }, label = { Text("ಕನ್ನಡ") })
         }
         if (controller.conversation.isNotEmpty()) TextButton(
             onClick = { controller.newConversation(); tab = "Assistant" }, modifier = Modifier.padding(horizontal = 24.dp)
-        ) { Text("New conversation") }
+        ) { Text(context.uiText(R.string.new_conversation)) }
         if (tab == "Your apps") AppBrowser(Modifier.weight(1f))
         else {
             val scroll = rememberScrollState()
-            LaunchedEffect(controller.conversation.size) { scroll.animateScrollTo(scroll.maxValue) }
+            LaunchedEffect(controller.conversation.size, controller.resetVersion, voice.language) {
+                if (controller.conversation.isEmpty()) scroll.scrollTo(0)
+                else scroll.animateScrollTo(scroll.maxValue)
+            }
             Column(Modifier.weight(1f).verticalScroll(scroll).padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
                     Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -131,30 +150,30 @@ fun AgentScreen(modifier: Modifier = Modifier) {
                     }
                 }
                 if (controller.conversation.isEmpty()) {
-                    Text("A little help.\nYour way.", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold)
-                    Text("Tell me what you'd like to do. We'll take it one step at a time.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(context.uiText(R.string.hero), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold)
+                    Text(context.uiText(R.string.intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("What sounds good today?", style = MaterialTheme.typography.titleMedium)
-                            Text("Need lunch or an afternoon snack? I'll ask what you like before looking for options.", style = MaterialTheme.typography.bodyMedium)
-                            TextButton(onClick = { instruction = "Help me order food" }, contentPadding = PaddingValues(0.dp)) { Text("Help me order food  →") }
+                            Text(context.uiText(R.string.food_title), style = MaterialTheme.typography.titleMedium)
+                            Text(context.uiText(R.string.food_intro), style = MaterialTheme.typography.bodyMedium)
+                            TextButton(onClick = { instruction = context.uiText(R.string.food_help) }, contentPadding = PaddingValues(0.dp)) { Text(context.uiText(R.string.food_help_button)) }
                         }
                     }
                 }
                 if (service == null) Card(shape = RoundedCornerShape(20.dp)) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Let me help in your apps", style = MaterialTheme.typography.titleMedium)
-                        Text("Allow screen access so I can read app controls and help with tasks you start.", style = MaterialTheme.typography.bodyMedium)
-                        Button(onClick = { disclose = true }) { Text("Set up screen access") }
+                        Text(context.uiText(R.string.screen_title), style = MaterialTheme.typography.titleMedium)
+                        Text(context.uiText(R.string.screen_intro), style = MaterialTheme.typography.bodyMedium)
+                        Button(onClick = { disclose = true }) { Text(context.uiText(R.string.screen_setup)) }
                     }
                 }
-                if (!controller.connected) TextButton(onClick = { controller.checkConnection() }) { Text("Try connecting again") }
+                if (!controller.connected) TextButton(onClick = { controller.checkConnection() }) { Text(context.uiText(R.string.reconnect)) }
                 controller.conversation.forEach { entry ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (entry.fromUser) Arrangement.End else Arrangement.Start) {
                         Surface(Modifier.widthIn(max = 340.dp), shape = RoundedCornerShape(20.dp),
                             color = if (entry.fromUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(if (entry.fromUser) "You" else "HandsFree", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                Text(if (entry.fromUser) context.uiText(R.string.you) else "HandsFree", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                 Text(entry.text, style = MaterialTheme.typography.bodyLarge)
                             }
                         }
@@ -162,7 +181,7 @@ fun AgentScreen(modifier: Modifier = Modifier) {
                 }
                 if (controller.running && controller.pending == null) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
-                    Text("I'm checking the next step. You can stop at any time.", style = MaterialTheme.typography.bodyMedium)
+                    Text(context.uiText(R.string.working_hint), style = MaterialTheme.typography.bodyMedium)
                 }
                 if (controller.status in setOf(AgentStatus.FAILED, AgentStatus.STOPPED, AgentStatus.COMPLETED)) {
                     Text(if (controller.status == AgentStatus.COMPLETED) controller.latestResponse else controller.message,
@@ -173,72 +192,74 @@ fun AgentScreen(modifier: Modifier = Modifier) {
             Surface(shadowElevation = 6.dp, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (!controller.running) OutlinedTextField(instruction, onValueChange = { instruction = it.take(2000) },
-                        placeholder = { Text("What would you like to do?") }, shape = RoundedCornerShape(20.dp),
+                        placeholder = { Text(context.uiText(R.string.instruction)) }, shape = RoundedCornerShape(20.dp),
                         modifier = Modifier.fillMaxWidth(), minLines = 1, maxLines = 3)
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (controller.running) {
-                            if (!voice.sessionActive) OutlinedButton(onClick = { requestVoice(if (controller.pending != null) "reply" else "conversation") }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text("Start conversation") }
-                            Button(onClick = { controller.stop() }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error), modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text("Stop") }
+                            if (!voice.sessionActive) OutlinedButton(onClick = { requestVoice(if (controller.pending != null) "reply" else "conversation") }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text(context.uiText(R.string.start_conversation)) }
+                            Button(onClick = { controller.stop() }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error), modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text(context.uiText(R.string.stop)) }
                         } else {
                             OutlinedButton(onClick = { if (voice.sessionActive) controller.stop() else requestVoice("conversation") },
-                                modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text(if (voice.sessionActive) "End conversation" else "Start conversation") }
+                                modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text(if (voice.sessionActive) context.uiText(R.string.end_conversation) else context.uiText(R.string.start_conversation)) }
                             Button(onClick = { if (voice.conversationEnabled) requestVoice("start") else controller.start(instruction) },
                                 enabled = instruction.isNotBlank() && service != null,
-                                modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text("Send task") }
+                                modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text(context.uiText(R.string.send_task)) }
                         }
                     }
-                    Text(if (voice.sessionActive) "Conversation on · ${if (voice.language == "kn-IN") "ಕನ್ನಡ" else "English"}" else "Tap Start conversation, or type a task",
+                    Text(if (voice.sessionActive) context.uiText(R.string.conversation_on, if (voice.language == "kn-IN") "ಕನ್ನಡ" else "English") else context.uiText(R.string.start_hint),
                         style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(context.uiText(R.string.silence_hint), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
     }
-    if (settings) AlertDialog(onDismissRequest = { settings = false }, title = { Text("Make it yours") }, text = {
+    if (settings) AlertDialog(onDismissRequest = { settings = false }, title = { Text(context.uiText(R.string.personalize)) }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Voice conversation", Modifier.weight(1f))
+                Text(context.uiText(R.string.voice_conversation), Modifier.weight(1f))
                 Switch(checked = voice.conversationEnabled, onCheckedChange = { voice.conversationEnabled = it; if (!it) voice.endSession() })
             }
-            Text("Start once, then speak requests and approvals across apps. Listening pauses during my spoken replies. Say stop conversation to end microphone access.", style = MaterialTheme.typography.bodySmall)
+            Text(context.uiText(R.string.voice_help), style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = voice.language == "en-IN", onClick = { voice.language = "en-IN" }, label = { Text("English") })
-                FilterChip(selected = voice.language == "kn-IN", onClick = { voice.language = "kn-IN" }, label = { Text("ಕನ್ನಡ") })
+                FilterChip(selected = voice.language == "en-IN", enabled = !controller.running, onClick = { selectLanguage("en-IN") }, label = { Text("English") })
+                FilterChip(selected = voice.language == "kn-IN", enabled = !controller.running, onClick = { selectLanguage("kn-IN") }, label = { Text("ಕನ್ನಡ") })
             }
-            Text(if (service != null) "Screen access is on" else "Screen access needs setup")
-            TextButton(onClick = { settings = false; disclose = true }) { Text("Screen access settings") }
-            if (BuildConfig.DEBUG) TextButton(onClick = { settings = false; diagnostics = true }) { Text("Developer tools") }
+            if (controller.running) Text(context.uiText(R.string.language_locked), style = MaterialTheme.typography.bodySmall)
+            Text(if (service != null) context.uiText(R.string.screen_on) else context.uiText(R.string.screen_needed))
+            TextButton(onClick = { settings = false; disclose = true }) { Text(context.uiText(R.string.screen_settings)) }
+            if (BuildConfig.DEBUG) TextButton(onClick = { settings = false; diagnostics = true }) { Text(context.uiText(R.string.developer_tools)) }
         }
-    }, confirmButton = { TextButton(onClick = { settings = false }) { Text("Done") } })
-    if (disclose) AlertDialog(onDismissRequest = { disclose = false }, title = { Text("Allow screen access") },
-        text = { Text("HandsFree reads app controls and performs actions only for tasks you start. Screen information is processed on your connected computer. Protected authentication fields are excluded. You can stop at any time.") },
-        confirmButton = { TextButton(onClick = { disclose = false; context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) { Text("Open settings") } },
-        dismissButton = { TextButton(onClick = { disclose = false }) { Text("Not now") } })
-    if (voiceDisclosure) AlertDialog(onDismissRequest = { voiceDisclosure = false }, title = { Text("Talk with HandsFree") },
-        text = { Text("After Start conversation, the microphone stays available across apps and between tasks until you stop. Speech is sent to our speech service; silence is discarded on the phone. I'll read approvals aloud so you can answer by voice. Listening pauses while I speak. Stop ends microphone access. Payment remains yours to complete manually.") },
-        confirmButton = { TextButton(onClick = { voiceDisclosure = false; preferences.edit().putBoolean("audio_disclosure", true).apply(); microphone.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Enable voice") } },
-        dismissButton = { TextButton(onClick = { voiceDisclosure = false; voice.conversationEnabled = false; if (voiceAction == "start") controller.start(instruction) }) { Text("Use typing") } })
+    }, confirmButton = { TextButton(onClick = { settings = false }) { Text(context.uiText(R.string.done)) } })
+    if (disclose) AlertDialog(onDismissRequest = { disclose = false }, title = { Text(context.uiText(R.string.allow_screen)) },
+        text = { Text(context.uiText(R.string.screen_disclosure)) },
+        confirmButton = { TextButton(onClick = { disclose = false; context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) { Text(context.uiText(R.string.open_settings)) } },
+        dismissButton = { TextButton(onClick = { disclose = false }) { Text(context.uiText(R.string.not_now)) } })
+    if (voiceDisclosure) AlertDialog(onDismissRequest = { voiceDisclosure = false }, title = { Text(context.uiText(R.string.voice_title)) },
+        text = { Text(context.uiText(R.string.voice_disclosure)) },
+        confirmButton = { TextButton(onClick = { voiceDisclosure = false; preferences.edit().putBoolean("audio_disclosure", true).apply(); microphone.launch(Manifest.permission.RECORD_AUDIO) }) { Text(context.uiText(R.string.enable_voice)) } },
+        dismissButton = { TextButton(onClick = { voiceDisclosure = false; voice.conversationEnabled = false; if (voiceAction == "start") controller.start(instruction) }) { Text(context.uiText(R.string.use_typing)) } })
     controller.pending?.takeIf { it.clarification || service == null }?.let { pending ->
         LaunchedEffect(pending) {
             answer = ""
             if (owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) service?.hidePanel()
         }
-        AlertDialog(onDismissRequest = { controller.newConversation() }, title = { Text(if (pending.apps.isEmpty()) "Your turn" else "Choose an app") }, text = {
+        AlertDialog(onDismissRequest = { controller.newConversation() }, title = { Text(if (pending.apps.isEmpty()) context.uiText(R.string.your_turn) else context.uiText(R.string.choose_app)) }, text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(pending.message)
-                TextButton(onClick = { controller.newConversation() }) { Text("Home / new task") }
+                TextButton(onClick = { controller.newConversation() }) { Text(context.uiText(R.string.home_new)) }
                 pending.apps.forEach { app ->
                     OutlinedButton(onClick = { controller.chooseApp(app) }, modifier = Modifier.fillMaxWidth()) {
                         Image(app.icon.asImageBitmap(), null, Modifier.size(28.dp)); Spacer(Modifier.width(10.dp)); Text(app.name)
                     }
                 }
-                OutlinedTextField(answer, onValueChange = { answer = it.take(1000) }, label = { Text("Your reply") }, shape = RoundedCornerShape(16.dp))
-                TextButton(onClick = { requestVoice("reply") }) { Text(if (voice.recording) "Listening…" else "Listen again") }
-                if (voice.lastTranscript.isNotBlank()) Text("Heard: ${voice.lastTranscript}", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(answer, onValueChange = { answer = it.take(1000) }, label = { Text(context.uiText(R.string.your_reply)) }, shape = RoundedCornerShape(16.dp))
+                TextButton(onClick = { requestVoice("reply") }) { Text(if (voice.recording) context.uiText(R.string.listening) else context.uiText(R.string.listen_again)) }
+                if (voice.lastTranscript.isNotBlank()) Text(context.uiText(R.string.heard, voice.lastTranscript), style = MaterialTheme.typography.bodySmall)
             }
-        }, confirmButton = { TextButton(enabled = answer.isNotBlank(), onClick = { controller.respond(answer) }) { Text("Continue") } },
-            dismissButton = { TextButton(onClick = { controller.stop() }) { Text("Stop") } })
+        }, confirmButton = { TextButton(enabled = answer.isNotBlank(), onClick = { controller.respond(answer) }) { Text(context.uiText(R.string.continue_button)) } },
+            dismissButton = { TextButton(onClick = { controller.stop() }) { Text(context.uiText(R.string.stop)) } })
     }
-    if (diagnostics) AlertDialog(onDismissRequest = { diagnostics = false }, title = { Text("Developer tools") }, text = {
+    if (diagnostics) AlertDialog(onDismissRequest = { diagnostics = false }, title = { Text(context.uiText(R.string.developer_tools)) }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(controller.connection)
             OutlinedTextField(inspectQuery, onValueChange = { inspectQuery = it }, label = { Text("App name to inspect") })
@@ -257,5 +278,5 @@ fun AgentScreen(modifier: Modifier = Modifier) {
             Text(controller.lastAction)
             controller.history.takeLast(12).forEach { Text("${it.action}: ${it.result}", style = MaterialTheme.typography.bodySmall) }
         }
-    }, confirmButton = { TextButton(onClick = { diagnostics = false }) { Text("Close") } })
+    }, confirmButton = { TextButton(onClick = { diagnostics = false }) { Text(context.uiText(R.string.close)) } })
 }

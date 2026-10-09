@@ -26,7 +26,7 @@ def planning_payload(request: NextActionRequest) -> dict:
         if element.editable:
             compact["editable"] = True
         elements.append(compact)
-    return {"goal": request.goal, "constraints": request.constraints,
+    return {"goal": request.goal, "constraints": request.constraints, "response_language": request.response_language,
             "available_apps": [a.model_dump() for a in request.available_apps],
             "allowed_actions": request.allowed_actions, "task_state": request.task_state,
             "history": [h.model_dump() for h in request.history],

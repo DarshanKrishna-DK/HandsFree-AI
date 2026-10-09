@@ -5,6 +5,13 @@ from backend.model_schema import planning_payload
 from backend.contracts import NextActionRequest
 
 
+def test_planner_preserves_kannada_response_language_and_original_labels():
+    request = NextActionRequest(task_id="kn", goal="ಆಹಾರ ಬೇಕು", observation_id="s", response_language="kn-IN",
+        screen={"package_name": "food.app", "elements": []}, allowed_actions=["ask_user"])
+    assert planning_payload(request).get("response_language") == "kn-IN"
+    assert planning_payload(request)["goal"] == "ಆಹಾರ ಬೇಕು"
+
+
 def test_open_app_schema_requires_non_null_package():
     variant = action_schema(["open_app"])["anyOf"][0]
     assert "arguments" in variant["required"]

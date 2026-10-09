@@ -38,6 +38,7 @@ class HistoryEntry(StrictModel):
 
 
 class NextActionRequest(StrictModel):
+    response_language: Literal["en-IN", "kn-IN"] = "en-IN"
     task_id: str = Field(min_length=1, max_length=80)
     goal: str = Field(min_length=1, max_length=2000)
     observation_id: str = Field(min_length=1, max_length=80)

@@ -1,5 +1,7 @@
 package com.example.handsfree.ui
 
+import com.example.handsfree.ui.uiText
+import com.example.handsfree.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -53,21 +55,21 @@ fun AppBrowser(modifier: Modifier = Modifier) {
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (_: Exception) {
-            error = "Could not load apps. Please refresh to try again."
+            error = context.uiText(R.string.apps_failed)
         } finally { loading = false }
     }
     val matches = remember(apps, query) { apps.filter { it.matches(query) } }
     Column(modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Your apps", style = MaterialTheme.typography.headlineSmall)
-        Text("Choose an app to open.", style = MaterialTheme.typography.bodyLarge)
+        Text(context.uiText(R.string.your_apps), style = MaterialTheme.typography.headlineSmall)
+        Text(context.uiText(R.string.choose_open), style = MaterialTheme.typography.bodyLarge)
         OutlinedTextField(value = query, onValueChange = { query = it },
-            label = { Text("Search apps") }, placeholder = { Text("Search by name") },
+            label = { Text(context.uiText(R.string.search_apps)) }, placeholder = { Text(context.uiText(R.string.search_name)) },
             singleLine = true, modifier = Modifier.fillMaxWidth(),
-            trailingIcon = { if (query.isNotEmpty()) TextButton(onClick = { query = "" }) { Text("Clear") } })
+            trailingIcon = { if (query.isNotEmpty()) TextButton(onClick = { query = "" }) { Text(context.uiText(R.string.clear)) } })
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(if (loading) "Loading apps…" else "${matches.size} apps",
+            Text(if (loading) context.uiText(R.string.loading_apps) else context.uiText(R.string.apps_count, matches.size),
                 modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
-            TextButton(onClick = { refresh++ }, enabled = !loading) { Text("Refresh") }
+            TextButton(onClick = { refresh++ }, enabled = !loading) { Text(context.uiText(R.string.refresh)) }
         }
         feedback?.let {
             Text(it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
@@ -77,18 +79,18 @@ fun AppBrowser(modifier: Modifier = Modifier) {
             loading -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
             error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
             matches.isEmpty() -> {
-                Text(if (query.isBlank()) "No launchable apps found" else "No matching apps",
+                Text(if (query.isBlank()) context.uiText(R.string.no_apps) else context.uiText(R.string.no_match),
                     style = MaterialTheme.typography.titleMedium)
-                Text("Only installed apps that can be opened appear here. Try another name or refresh after installing an app.")
+                Text(context.uiText(R.string.apps_hint))
             }
             else -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 16.dp)) {
                 items(matches, key = { it.packageName }) { app ->
                     Row(Modifier.fillMaxWidth().clickable(role = Role.Button,
-                        onClickLabel = "Open ${app.name}") {
+                        onClickLabel = context.uiText(R.string.open_named_app, app.name)) {
                         feedback = when (manager.open(app.packageName)) {
-                            LaunchResult.REQUESTED -> "Opening ${app.name}"
-                            LaunchResult.UNAVAILABLE -> "${app.name} is no longer available. Refresh or choose another app."
-                            LaunchResult.BLOCKED -> "Android did not allow ${app.name} to open. Check its restrictions."
+                            LaunchResult.REQUESTED -> context.uiText(R.string.opening_app, app.name)
+                            LaunchResult.UNAVAILABLE -> context.uiText(R.string.app_unavailable, app.name)
+                            LaunchResult.BLOCKED -> context.uiText(R.string.app_blocked, app.name)
                         }
                         refresh++
                     }.heightIn(min = 80.dp).padding(vertical = 12.dp),

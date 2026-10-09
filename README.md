@@ -196,6 +196,10 @@ If Android restricts the setting, follow its supported App info approval flow. S
 
 Tap **Start conversation** and complete the initial audio disclosure/microphone permission.
 
+Use the **English / ಕನ್ನಡ** toggle on Home to change the app and voice language. The selection is saved. Finish or stop an active task before changing language; changing language ends the current voice session.
+
+Listening begins without waiting for a spoken greeting. After **five seconds of detected silence**, the recording is submitted for transcription; speaking again restarts that pause. A countdown shows when submission is approaching. Transcription and local-model planning have separate processing times, so five seconds is not a promise of a completed response. Speech connections are reused to avoid reconnecting for every turn.
+
 Speak your goal. Questions and approvals can be answered aloud. Say **“approve”** or **“decline”** when asked to authorize an action.
 
 | Say or tap | Result |

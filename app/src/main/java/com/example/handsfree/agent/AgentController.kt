@@ -1,5 +1,8 @@
 package com.example.handsfree.agent
 
+import com.example.handsfree.ui.uiText
+import com.example.handsfree.ui.AppLanguage
+import com.example.handsfree.R
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.*
@@ -73,7 +76,7 @@ class AgentController(private val context: Context) {
         }
     }
     fun listenAgain() { pending?.let { prompt ->
-        VoiceController.get(context).ask(prompt.message + if (!prompt.clarification) " Say approve or decline." else "")
+        VoiceController.get(context).ask(prompt.message + if (!prompt.clarification) context.uiText(R.string.approval_hint) else "")
     } }
     fun receiveVoice(text: String, capturedRevision: Long) {
         if (text.isBlank()) return
@@ -97,7 +100,7 @@ class AgentController(private val context: Context) {
         voiceRevision++
         chat(text, true)
         record("user_update", text)
-        VoiceController.get(context).speak("I've noted that. I'll check the next step with your updated request.")
+        VoiceController.get(context).speak(context.uiText(R.string.request_updated))
     }
     private fun handleVoiceReply(text: String, prompt: PendingConsent) {
         if (pending !== prompt) return
@@ -107,7 +110,7 @@ class AgentController(private val context: Context) {
             VoiceReply.REJECT -> respond(null)
             VoiceReply.ANSWER -> respond(text)
             VoiceReply.UNCLEAR -> {
-                val guidance = "Please say approve, decline, or stop."
+                val guidance = context.uiText(R.string.approval_retry)
                 ServiceConnection.service?.updatePanel(guidance)
                 VoiceController.get(context).ask(guidance)
             }
@@ -130,15 +133,15 @@ class AgentController(private val context: Context) {
         VoiceController.get(context).cancelTurn()
         goal = ""; history = emptyList(); constraints.clear(); conversation = emptyList()
         latestResponse = ""; lastAction = ""; resetVersion++
-        update(AgentStatus.IDLE, "What would you like to do?")
+        update(AgentStatus.IDLE, context.uiText(R.string.instruction))
         if (openHome) context.startActivity(Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-        VoiceController.get(context).ask("What would you like to do next?")
+        VoiceController.get(context).ask(context.uiText(R.string.next_task))
     }
     fun privateInputDetected() {
         cancelTask()
         VoiceController.get(context).endSession()
-        update(AgentStatus.FAILED, "Private input is on screen. Conversation ended. Complete that step yourself, then return Home to start again.")
+        update(AgentStatus.FAILED, context.uiText(R.string.private_input))
     }
     fun stop() {
         if (com.example.handsfree.BuildConfig.DEBUG) android.util.Log.d("HandsFreeAgent", "Stop requested", Throwable("Cancellation origin"))
@@ -146,7 +149,7 @@ class AgentController(private val context: Context) {
         VoiceController.get(context).endSession()
         ServiceConnection.service?.approvedPackages = emptySet()
         ServiceConnection.service?.hidePanel()
-        update(AgentStatus.STOPPED, "Stopped. No further actions will run.")
+        update(AgentStatus.STOPPED, context.uiText(R.string.stopped))
         record("stop_task", "User stopped the task")
     }
 
@@ -170,7 +173,7 @@ class AgentController(private val context: Context) {
             }) else null,
             choices = apps.take(6).map { app -> app.name to { chooseApp(app) } },
             listen = { listenAgain() })
-        VoiceController.get(context).ask(text + if (!clarification) " Say approve or decline." else "")
+        VoiceController.get(context).ask(text + if (!clarification) context.uiText(R.string.approval_hint) else "")
         return try { withTimeout(10 * 60_000L) { deferred.await() } }
         finally {
             if (reply === deferred) {
@@ -178,7 +181,7 @@ class AgentController(private val context: Context) {
                 voiceRevision++
                 VoiceController.get(context).cancelTurn()
                 VoiceController.get(context).onListeningChanged = null
-                if (currentCoroutineContext().isActive) ServiceConnection.service?.showPanel("Preparing the next step")
+                if (currentCoroutineContext().isActive) ServiceConnection.service?.showPanel(context.uiText(R.string.preparing))
             }
         }
     }
@@ -194,17 +197,18 @@ class AgentController(private val context: Context) {
         var selected = candidates.singleOrNull { it.packageName == automatic }
         var attempts = 0
         while (selected == null && attempts++ < 3) {
-            val response = awaitUser("Which app would you like to use? ${candidates.joinToString { it.name }}.", true, candidates)
+            val response = awaitUser(context.uiText(R.string.which_food_app, candidates.joinToString { it.name }), true, candidates)
                 ?: return false
             selected = candidates.singleOrNull { response.contains(it.packageName, true) ||
+                FoodIntake.namedPackage(response) == it.packageName ||
                 Regex("(?i)(?<!\\w)${Regex.escape(it.name)}(?!\\w)").containsMatchIn(response) }
         }
         val chosen = selected ?: error("I couldn't match that app. Please choose an app and try again.")
         approvedApps += chosen.packageName
         service.approvedPackages = approvedApps.toSet()
         constraints += "User-selected food app: ${chosen.name}, package ${chosen.packageName}. Stay in this app."
-        update(AgentStatus.EXECUTING, "Opening ${chosen.name}")
-        chat("Let's use ${chosen.name}.")
+        update(AgentStatus.EXECUTING, context.uiText(R.string.opening_app, chosen.name))
+        chat(context.uiText(R.string.lets_use, chosen.name))
         val observation = service.observe()
         val outcome = service.execute(ProposedAction("open_app", observation.id,
             arguments = ActionArguments(packageName = chosen.packageName)), approvedApps, confirmed = true)
@@ -216,24 +220,33 @@ class AgentController(private val context: Context) {
         check(observed.packageName == chosen.packageName) { "Please open ${chosen.name}, then try again." }
         while (true) {
             val question = intake.next() ?: break
-            val answer = awaitUser(question.text, true) ?: return false
+            val questionText = when (question.key) {
+                "food" -> context.uiText(R.string.food_question)
+                "budget" -> context.uiText(R.string.budget_question)
+                "diet" -> context.uiText(R.string.diet_question)
+                "quantity" -> context.uiText(R.string.quantity_question)
+                else -> if (question.text.startsWith("You mentioned ")) context.uiText(R.string.timing_specific,
+                    question.text.substringAfter("You mentioned ").substringBefore(". Do you"))
+                    else context.uiText(R.string.timing_question)
+            }
+            val answer = awaitUser(questionText, true) ?: return false
             if (!intake.answer(question.key, answer)) continue
         }
         constraints += intake.constraints()
         constraints += "Food cart completion: after the user selects observed items, add the approved quantities and open the cart. Read actual item/quantity evidence and the labeled final payable total. Populate cart_item_ids and cart_total_ids for finish_task. Never checkout or place an order."
-        chat("Thanks. I'll look for options that match what you've told me, then ask you to choose.")
+        chat(context.uiText(R.string.food_thanks))
         return true
     }
 
     fun start(instruction: String) {
         if (running) return
-        if (instruction.isBlank() || instruction.length > 2000) { message = "Enter a task of 1–2000 characters."; return }
-        val service = ServiceConnection.service ?: run { message = "Enable HandsFree AI in Accessibility settings first."; return }
+        if (instruction.isBlank() || instruction.length > 2000) { message = context.uiText(R.string.task_invalid); return }
+        val service = ServiceConnection.service ?: run { message = context.uiText(R.string.enable_accessibility); return }
         job?.cancel(); VoiceController.get(context).cancelTurn(); voiceRevision++
         goal = instruction.trim(); history = emptyList(); constraints = mutableListOf(); approvedApps.clear()
         service.approvedPackages = emptySet()
         service.onStop = ::stop
-        service.onDisconnected = { stop(); update(AgentStatus.FAILED, "Accessibility service disconnected. Enable it and start again.") }
+        service.onDisconnected = { stop(); update(AgentStatus.FAILED, context.uiText(R.string.disconnected)) }
         latestResponse = ""
         lastAction = ""
         conversation = listOf(ConversationMessage(goal, true))
@@ -245,14 +258,14 @@ class AgentController(private val context: Context) {
             var modelFailures = 0
             var cartHandoff = false
             try {
-                update(AgentStatus.UNDERSTANDING, "Getting ready to help")
-                service.showPanel("HandsFree AI\nPreparing your task")
+                update(AgentStatus.UNDERSTANDING, context.uiText(R.string.getting_ready))
+                service.showPanel(context.uiText(R.string.preparing_task))
                 backend.health()
                 var apps = withContext(Dispatchers.IO) { discovery.discover() }
                 if (FoodIntake.applies(goal) && !prepareFood(apps, service)) { stop(); return@launch }
                 repeat(60) {
                     ensureActive()
-                    update(AgentStatus.OBSERVING, "Reading the current approved screen")
+                    update(AgentStatus.OBSERVING, context.uiText(R.string.observing))
                     service.approvedPackages = approvedApps.toSet()
                     val before = service.observe()
                     if (before.blockedReason != null) {
@@ -261,15 +274,15 @@ class AgentController(private val context: Context) {
                     }
                     val openedApp = apps.find { it.packageName == before.packageName && it.packageName in approvedApps }
                     if (openedApp != null && AppGoalVerifier.isLaunchOnly(goal, openedApp.name, openedApp.packageName)) {
-                        latestResponse = "Opened ${openedApp.name}. The active application was verified."
+                        latestResponse = context.uiText(R.string.opened_app, openedApp.name)
                         record("finish_task", "Verified foreground package: ${before.packageName}")
                         VoiceController.get(context).speak(latestResponse)
                         update(AgentStatus.COMPLETED, latestResponse)
                         return@launch
                     }
-                    update(AgentStatus.PLANNING, "Working out the next step…")
+                    update(AgentStatus.PLANNING, context.uiText(R.string.planning))
                     val plannedRevision = voiceRevision
-                    val action = try { backend.nextAction(taskId, goal, before, apps, history, constraints) }
+                    val action = try { backend.nextAction(taskId, goal, before, apps, history, constraints, AppLanguage.code(context)) }
                     catch (cancelled: CancellationException) { throw cancelled }
                     catch (error: Exception) {
                         record("planning_failed", error.message ?: "Invalid model response")
@@ -299,9 +312,10 @@ class AgentController(private val context: Context) {
                         }
                         val appName = apps.find { it.packageName == packageName }?.name ?: storeChoices[packageName]
                         val prompt = when(action.action) {
-                            "open_app" -> "Open ${appName ?: packageName} for this task?"
-                            "open_play_store" -> "Open the official Play Store listing for $appName? You decide whether to install."
-                            else -> "${decision.message}\n${action.reason}"
+                            "open_app" -> context.uiText(R.string.open_app_consent, appName ?: packageName.orEmpty())
+                            "open_play_store" -> context.uiText(R.string.store_consent, appName.orEmpty())
+                            else -> if (AppLanguage.code(context) == "kn-IN") context.uiText(R.string.action_consent, action.reason)
+                                else "${decision.message}\n${action.reason}"
                         }
                         if (awaitUser(prompt) == null) { stop(); return@launch }
                         confirmed = true
@@ -317,9 +331,9 @@ class AgentController(private val context: Context) {
                             record("ask_user", "User replied: ${response.take(400)}")
                         }
                         "speak" -> {
-                            latestResponse = "Observed information: " + current.elements
+                            latestResponse = context.uiText(R.string.observed, current.elements
                                 .filter { it.id in action.arguments.evidenceIds }
-                                .joinToString("; ") { it.text.ifBlank { it.description } }
+                                .joinToString("; ") { it.text.ifBlank { it.description } })
                             VoiceController.get(context).speak(latestResponse)
                             record("speak", latestResponse)
                         }
@@ -331,12 +345,12 @@ class AgentController(private val context: Context) {
                                     record("cart_incomplete", "Cart items and an unambiguous labeled payable total are required. Open cart or bill details; never use subtotal or menu prices.")
                                     return@repeat
                                 }
-                                latestResponse = cart.spokenReview
-                                if (awaitUser(cart.spokenReview) == null) { stop(); return@launch }
+                                latestResponse = context.uiText(R.string.cart_review, cart.items.joinToString("; "), cart.amount)
+                                if (awaitUser(latestResponse) == null) { stop(); return@launch }
                                 val reviewed = service.observe()
                                 val checked = CartReview.from(reviewed, action.arguments)
                                 check(reviewed.id == fresh.id && checked == cart) { "The cart changed while you reviewed it. Please start again to check the new total." }
-                                latestResponse = cart.handoff
+                                latestResponse = context.uiText(R.string.cart_handoff, cart.amount)
                                 chat(latestResponse)
                                 record("finish_task", "User confirmed current cart items and displayed payable total ${cart.amount}")
                                 VoiceController.get(context).speak(latestResponse)
@@ -349,7 +363,7 @@ class AgentController(private val context: Context) {
                             }
                             // Arithmetic gets an independent check; other goals require human review.
                             if (CompletionVerifier.expectedCalculation(goal) == null || fresh.packageName !in SafetyPolicyEngine.calculatorPackages) {
-                                if (awaitUser("Observed: ${action.arguments.expectedText}\nDoes this complete your task?") == null) { stop(); return@launch }
+                                if (awaitUser(context.uiText(R.string.completion_review, action.arguments.expectedText.orEmpty())) == null) { stop(); return@launch }
                             }
                             latestResponse = action.arguments.message!!
                             VoiceController.get(context).speak(latestResponse)
@@ -364,7 +378,7 @@ class AgentController(private val context: Context) {
                             val detail = target?.let { " Target ${it.id}: ${it.text.ifBlank { it.description }.take(100)}." }
                                 ?: action.arguments.packageName?.let { " Package: $it." }.orEmpty()
                             record(action.action, outcome.message + detail)
-                            update(AgentStatus.VERIFYING, "Checking the screen after ${action.action}")
+                            update(AgentStatus.VERIFYING, context.uiText(R.string.checking_screen))
                             delay(700)
                             ensureActive()
                             var after = service.observe()
@@ -381,7 +395,7 @@ class AgentController(private val context: Context) {
                             if (outcome.accepted && action.action == "open_app" && launched != null &&
                                 after.packageName == launched.packageName &&
                                 AppGoalVerifier.isLaunchOnly(goal, launched.name, launched.packageName)) {
-                                latestResponse = "Opened ${launched.name}. The active application was verified."
+                                latestResponse = context.uiText(R.string.opened_app, launched.name)
                                 record("finish_task", "Verified foreground package: ${after.packageName}")
                                 VoiceController.get(context).speak(latestResponse)
                                 update(AgentStatus.COMPLETED, latestResponse)
@@ -403,11 +417,12 @@ class AgentController(private val context: Context) {
                 }
                 error("Planning limit reached. Review the task and try again.")
             } catch (cancelled: CancellationException) {
-                if (runGeneration == generation) update(AgentStatus.STOPPED, "Task cancelled.")
+                if (runGeneration == generation) update(AgentStatus.STOPPED, context.uiText(R.string.cancelled))
             } catch (error: Exception) {
                 if (runGeneration == generation) {
-                    update(AgentStatus.FAILED, error.message ?: "Task failed safely. Please retry.")
-                    record("failed", message)
+                    record("failed", error.message ?: "Task failed")
+                    update(AgentStatus.FAILED, if (AppLanguage.code(context) == "kn-IN") context.uiText(R.string.safe_failure)
+                        else error.message ?: context.uiText(R.string.safe_failure))
                 }
             } finally {
                 if (runGeneration == generation) {
@@ -422,7 +437,7 @@ class AgentController(private val context: Context) {
                         service.hidePanel()
                         if (voice.sessionActive && status in setOf(AgentStatus.COMPLETED, AgentStatus.FAILED))
                             if (cartHandoff) voice.endSession()
-                            else voice.speak((if (status == AgentStatus.FAILED) "$message " else "") + "You can tell me another task, say home, or say stop conversation.")
+                            else voice.speak((if (status == AgentStatus.FAILED) "$message " else "") + context.uiText(R.string.another_task))
                     }
                 }
             }

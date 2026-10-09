@@ -21,8 +21,9 @@ class BackendClient {
     suspend fun health(): JSONObject = JSONObject(request("/health"))
 
     suspend fun nextAction(taskId: String, goal: String, screen: ScreenObservation,
-                           apps: List<LaunchableApp>, history: List<ActionRecord>, constraints: List<String>): ProposedAction {
+                           apps: List<LaunchableApp>, history: List<ActionRecord>, constraints: List<String>, responseLanguage: String = "en-IN"): ProposedAction {
         val payload = JSONObject().put("task_id", taskId).put("goal", goal)
+            .put("response_language", responseLanguage)
             .put("observation_id", screen.id).put("task_state", "PLANNING")
             .put("screen", JSONObject().put("package_name", screen.packageName)
                 .put("blocked_reason", screen.blockedReason ?: JSONObject.NULL)

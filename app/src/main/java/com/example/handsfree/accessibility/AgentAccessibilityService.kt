@@ -1,5 +1,7 @@
 package com.example.handsfree.accessibility
 
+import com.example.handsfree.ui.uiText
+import com.example.handsfree.R
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.graphics.Color
@@ -193,23 +195,23 @@ class AgentAccessibilityService : AccessibilityService() {
         toolbar.addView(TextView(this).apply { text = "HandsFree"; setTextColor(Color.rgb(72, 38, 49)); textSize = 16f },
             LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         toolbar.addView(Button(this).apply {
-            text = "Home"; contentDescription = "Return to HandsFree home and cancel the task"
+            text = this@AgentAccessibilityService.uiText(R.string.home); contentDescription = this@AgentAccessibilityService.uiText(R.string.home_description)
             setOnClickListener { AgentController.get(this@AgentAccessibilityService).newConversation(openHome = true) }
         })
         toolbar.addView(Button(this).apply {
-            text = "Stop"; contentDescription = "Stop HandsFree AI"
+            text = this@AgentAccessibilityService.uiText(R.string.stop); contentDescription = this@AgentAccessibilityService.uiText(R.string.stop_description)
             setOnClickListener { onStop?.invoke(); hidePanel() }
         })
         layout.addView(toolbar)
         statusText = TextView(this).apply { text = message; setTextColor(Color.rgb(72, 38, 49)); textSize = 15f; maxLines = 8 }
         layout.addView(statusText)
         val controls = LinearLayout(this)
-        if (approval != null) controls.addView(Button(this).apply { text = "Approve"; setOnClickListener { approval() } })
-        if (reject != null) controls.addView(Button(this).apply { text = "Decline"; setOnClickListener { reject() } })
-        if (replyAction != null) controls.addView(Button(this).apply { text = "Type a reply"; setOnClickListener { replyAction() } })
+        if (approval != null) controls.addView(Button(this).apply { text = this@AgentAccessibilityService.uiText(R.string.approve); setOnClickListener { approval() } })
+        if (reject != null) controls.addView(Button(this).apply { text = this@AgentAccessibilityService.uiText(R.string.decline); setOnClickListener { reject() } })
+        if (replyAction != null) controls.addView(Button(this).apply { text = this@AgentAccessibilityService.uiText(R.string.type_reply); setOnClickListener { replyAction() } })
         layout.addView(controls)
         choices.forEach { (label, choose) -> layout.addView(Button(this).apply { text = label; setOnClickListener { choose() } }) }
-        if (listen != null) layout.addView(Button(this).apply { text = "Listen again"; setOnClickListener { listen() } })
+        if (listen != null) layout.addView(Button(this).apply { text = this@AgentAccessibilityService.uiText(R.string.listen_again); setOnClickListener { listen() } })
         val params = WindowManager.LayoutParams(
             (resources.displayMetrics.widthPixels * .85).toInt(), WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,

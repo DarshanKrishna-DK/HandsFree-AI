@@ -5,14 +5,21 @@ class FoodIntake(val original: String) {
     companion object {
         val foodPackages = setOf("com.application.zomato", "in.swiggy.android")
         private const val dishes = "pizzas?|dosas?|sandwich(?:es)?|biryani|idlis?|samosas?|pasta|salads?|burgers?|noodles|chapati|roti|rice|soup|poha|upma|parathas?"
+        private const val kannadaDishes = "ದೋಸೆ|ದೋಸಾ|ಇಡ್ಲಿ|ಸಮೋಸಾ|ಸ್ಯಾಂಡ್.?ವಿಚ್|ಪಿಜ್ಜಾ|ಬಿರಿಯಾನಿ|ಬರ್ಗರ್|ಚಪಾತಿ|ಪರೋಟ|ಬಜ್ಜಿ|ಪಕೋಡ|ಉಪ್ಪಿಟ್ಟು"
         fun applies(goal: String): Boolean = Regex(
-            "(?i)\\b(food|snacks?|lunch|dinner|breakfast|meals?|hungry|restaurants?|takeaway|$dishes)\\b|ಊಟ|ತಿಂಡಿ|ಆಹಾರ"
+            "(?i)\\b(food|snacks?|lunch|dinner|breakfast|meals?|hungry|restaurants?|takeaway|$dishes)\\b|ಊಟ|ತಿಂಡಿ|ಆಹಾರ|$kannadaDishes"
         ).containsMatchIn(goal) || (Regex("(?i)\\b(zomato|swiggy)\\b").containsMatchIn(goal) &&
             Regex("(?i)\\b(order|eat|find|search)\\b").containsMatchIn(goal))
         fun appCandidates(packages: List<String>) = packages.filter { it in foodPackages }.distinct()
+        private val aliases = mapOf("zomato" to "com.application.zomato", "ಜೊಮ್ಯಾಟೋ" to "com.application.zomato",
+            "ಜೊಮಾಟೊ" to "com.application.zomato", "ಝೊಮ್ಯಾಟೊ" to "com.application.zomato",
+            "swiggy" to "in.swiggy.android", "ಸ್ವಿಗ್ಗಿ" to "in.swiggy.android", "ಸ್ವಿಗಿ" to "in.swiggy.android")
+        fun namedPackage(text: String): String? = requestedPackages(text).singleOrNull()
+        private fun requestedPackages(text: String) = aliases.filterKeys {
+            Regex("(?i)(?<!\\w)${Regex.escape(it)}(?!\\w)").containsMatchIn(text)
+        }.values.distinct()
         fun automaticPackage(goal: String, installed: List<String>): String? {
-            val requested = mapOf("zomato" to "com.application.zomato", "swiggy" to "in.swiggy.android")
-                .filterKeys { Regex("(?i)\\b${Regex.escape(it)}\\b").containsMatchIn(goal) }.values
+            val requested = requestedPackages(goal)
             return if (requested.isNotEmpty()) requested.singleOrNull()?.takeIf { it in installed }
             else appCandidates(installed).singleOrNull()
         }
@@ -21,7 +28,7 @@ class FoodIntake(val original: String) {
     private val answers = linkedMapOf<String, String>()
     private val questions = buildList {
         // When uncertain, ask. A general meal name must never become a specific dish.
-        val explicitDish = Regex("(?i)\\b($dishes)\\b").containsMatchIn(original)
+        val explicitDish = Regex("(?i)\\b($dishes)\\b|$kannadaDishes").containsMatchIn(original)
         if (!explicitDish) add(Question("food", "What would you like to eat? Name something you enjoy, or ask me to suggest options."))
         if (!Regex("(?i)(₹|\\b(?:rs\\.?|inr|budget)\\b|no (?:spending )?limit)").containsMatchIn(original))
             add(Question("budget", "What is your total budget? You can also say no budget limit."))
