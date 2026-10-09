@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="210" viewBox="0 0 1040 210" role="img" aria-labelledby="title desc">
+  <title id="title">Observe, reason, act, verify, repeat</title>
+  <desc id="desc">The HandsFree agent proposes one action, validates it, and checks the result. The moving dot illustrates the loop, not live task progress.</desc>
+  <defs><linearGradient id="bg"><stop stop-color="#fff8f3"/><stop offset="1" stop-color="#f7dce3"/></linearGradient></defs>
+  <rect width="1040" height="210" rx="28" fill="url(#bg)"/>
+  <g font-family="Segoe UI,Arial,sans-serif" text-anchor="middle">
+    <text x="520" y="40" fill="#94465f" font-size="13" letter-spacing="4">ONE ACTION. VISIBLE EVIDENCE. YOUR CONTROL.</text>
+    <path d="M100 109H940" stroke="#d6a5b5" stroke-width="3"/>
+    <g fill="#fff8f3" stroke="#d6a5b5"><rect x="42" y="73" width="168" height="72" rx="18"/><rect x="238" y="73" width="168" height="72" rx="18"/><rect x="434" y="73" width="168" height="72" rx="18"/><rect x="630" y="73" width="168" height="72" rx="18"/><rect x="826" y="73" width="168" height="72" rx="18"/></g>
+    <g fill="#482631" font-size="23" font-weight="600"><text x="126" y="118">Observe</text><text x="322" y="118">Reason</text><text x="518" y="118">Act</text><text x="714" y="118">Verify</text><text x="910" y="118">Repeat</text></g>
+    <text x="520" y="184" fill="#765964" font-size="14">Gemma proposes · Android validates · You approve consequential steps</text>
+  </g>
+  <circle cx="126" cy="153" r="5" fill="#94465f"><animate attributeName="cx" values="126;322;518;714;910;126" dur="10s" repeatCount="indefinite" calcMode="discrete"/></circle>
+</svg>

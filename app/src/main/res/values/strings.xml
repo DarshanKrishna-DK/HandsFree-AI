@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">HandsFree AI</string>
+    <string name="accessibility_description">HandsFree AI reads visible app controls and performs approved actions for tasks you start. Screen information is sent to your local laptop for Gemma reasoning. Protected authentication fields are excluded. Use Stop at any time. Enable this service only if you consent to this access.</string>
+</resources>
