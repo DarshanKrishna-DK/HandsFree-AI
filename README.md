@@ -14,7 +14,7 @@ Built by **Team MERCI** for **Hacktoberfest Hack Day Bengaluru 2026**
 ![Compose](https://img.shields.io/badge/UI-Jetpack_Compose-C66B88?style=for-the-badge&logo=jetpackcompose&logoColor=white)
 ![Gemma](https://img.shields.io/badge/Reasoning-Gemma_4_E2B-725AA8?style=for-the-badge)
 ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-00897B?style=for-the-badge&logo=fastapi&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-765964?style=for-the-badge)
+![License](https://img.shields.io/badge/License-Apache_2.0-765964?style=for-the-badge)
 
 [What it does](#what-it-does) · [How it works](#how-it-works) · [Get started](#get-started) · [Try a conversation](#try-a-conversation) · [Current status](#current-status)
 
@@ -313,7 +313,9 @@ Local planning documents, device captures, credentials, caches, model files and 
 
 A more accessible way to get everyday things done.
 
-[MIT License](LICENSE) · Kotlin · Jetpack Compose · FastAPI · Gemma 4
+[Apache License 2.0](LICENSE) · Kotlin · Jetpack Compose · FastAPI · Gemma 4
+
+Copyright © 2026 Team MERCI. Licensed under the Apache License, Version 2.0.
 
 <sub>Respect the event's designated build period and submission rules. Publish only after the repository and demo evidence have been reviewed.</sub>
 
