@@ -7,6 +7,9 @@
     <string name="model_verified">Model file verified. On-phone task integration is still in development.</string>
     <string name="model_missing">No verified model saved yet.</string>
     <string name="model_import_failed">Could not verify this file. Use the exact supported download, check free storage and try again. Your previous model was kept.</string>
+    <string name="model_browser_failed">Could not open a browser. Open the model page in your browser, or choose a file you already downloaded.</string>
+    <string name="model_check_failed">Could not read the saved model. Try again or remove the saved copy before importing it again.</string>
+    <string name="model_remove_failed">Could not remove the saved model. Please try again.</string>
     <string name="model_source">Open model download page</string>
     <string name="model_import">Choose downloaded model</string>
     <string name="model_remove">Remove saved model</string>

@@ -25,6 +25,7 @@ data class ModelArtifact(val id: String, val bytes: Long, val sha256: String) {
 class VerifiedModelStore(private val directory: File, val artifact: ModelArtifact) {
     val modelFile get() = File(directory, artifact.fileName)
 
+    @Synchronized
     fun verify(checkActive: () -> Unit = {}): Boolean {
         val file = modelFile
         if (!file.isFile || file.length() != artifact.bytes) return false

@@ -28,19 +28,19 @@ fun ModelSetupDialog(onClose: () -> Unit) {
     var verified by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
     var importing by remember { mutableStateOf(false) }
-    var failed by remember { mutableStateOf(false) }
+    var failure by remember { mutableStateOf<Int?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
     var operation by remember { mutableStateOf<Job?>(null) }
     LaunchedEffect(Unit) {
         try {
             verified = withContext(Dispatchers.IO) { val job = currentCoroutineContext(); store.verify { job.ensureActive() } }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { failed = true }
+        catch (_: Exception) { failure = R.string.model_check_failed }
         finally { busy = false }
     }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null && !busy) {
-            busy = true; failed = false; importing = true; progress = 0f
+            busy = true; failure = null; importing = true; progress = 0f
             operation = scope.launch {
                 try {
                     withContext(Dispatchers.IO) {
@@ -54,7 +54,7 @@ fun ModelSetupDialog(onClose: () -> Unit) {
                     }
                     verified = true
                 } catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { failed = true }
+                catch (_: Exception) { failure = R.string.model_import_failed }
                 finally { busy = false; importing = false }
             }
         }
@@ -63,8 +63,7 @@ fun ModelSetupDialog(onClose: () -> Unit) {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(context.uiText(R.string.model_setup_description))
             Text(context.uiText(R.string.model_size))
-            Text(context.uiText(when {
-                failed -> R.string.model_import_failed
+            Text(context.uiText(failure ?: when {
                 importing -> R.string.model_importing
                 busy -> R.string.model_checking
                 verified -> R.string.model_verified
@@ -74,7 +73,8 @@ fun ModelSetupDialog(onClose: () -> Unit) {
             else if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             OutlinedButton(enabled = !busy, onClick = {
                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModelArtifact.SOURCE))) }
-                    .onFailure { failed = true }
+                    .onSuccess { failure = null }
+                    .onFailure { failure = R.string.model_browser_failed }
             }, modifier = Modifier.fillMaxWidth()) { Text(context.uiText(R.string.model_source)) }
             Button(enabled = !busy, onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) {
                 Text(context.uiText(R.string.model_import))
@@ -89,7 +89,11 @@ fun ModelSetupDialog(onClose: () -> Unit) {
         confirmButton = { TextButton(onClick = {
             confirmDelete = false; busy = true
             operation = scope.launch {
-                try { failed = !withContext(Dispatchers.IO) { store.delete() }; if (!failed) verified = false }
+                try {
+                    if (withContext(Dispatchers.IO) { store.delete() }) { verified = false; failure = null }
+                    else failure = R.string.model_remove_failed
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { failure = R.string.model_remove_failed }
                 finally { busy = false }
             }
         }) { Text(context.uiText(R.string.model_remove)) } },

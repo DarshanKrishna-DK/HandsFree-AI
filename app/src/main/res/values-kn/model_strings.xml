@@ -7,6 +7,9 @@
     <string name="model_verified">ಮಾದರಿ ಫೈಲ್ ಪರಿಶೀಲಿಸಲಾಗಿದೆ. ಫೋನ್‌ನಲ್ಲೇ ಕಾರ್ಯ ನಿರ್ವಹಿಸುವ ಸೌಲಭ್ಯ ಇನ್ನೂ ಅಭಿವೃದ್ಧಿಯಲ್ಲಿದೆ.</string>
     <string name="model_missing">ಪರಿಶೀಲಿಸಿದ ಮಾದರಿ ಇನ್ನೂ ಉಳಿಸಿಲ್ಲ.</string>
     <string name="model_import_failed">ಈ ಫೈಲ್ ಪರಿಶೀಲಿಸಲು ಆಗಲಿಲ್ಲ. ಸೂಚಿಸಿದ ಫೈಲ್ ಬಳಸಿ, ಖಾಲಿ ಜಾಗ ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ. ಹಿಂದಿನ ಮಾದರಿಯನ್ನು ಉಳಿಸಲಾಗಿದೆ.</string>
+    <string name="model_browser_failed">ಬ್ರೌಸರ್ ತೆರೆಯಲು ಆಗಲಿಲ್ಲ. ನಿಮ್ಮ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಮಾದರಿ ಪುಟ ತೆರೆಯಿರಿ ಅಥವಾ ಈಗಾಗಲೇ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿದ ಫೈಲ್ ಆರಿಸಿ.</string>
+    <string name="model_check_failed">ಉಳಿಸಿದ ಮಾದರಿ ಓದಲು ಆಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಉಳಿಸಿದ ಪ್ರತಿಯನ್ನು ತೆಗೆದುಹಾಕಿ ಮತ್ತೆ ಆಮದು ಮಾಡಿ.</string>
+    <string name="model_remove_failed">ಉಳಿಸಿದ ಮಾದರಿ ತೆಗೆದುಹಾಕಲು ಆಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
     <string name="model_source">ಮಾದರಿ ಡೌನ್‌ಲೋಡ್ ಪುಟ ತೆರೆಯಿರಿ</string>
     <string name="model_import">ಡೌನ್‌ಲೋಡ್ ಮಾಡಿದ ಮಾದರಿ ಆರಿಸಿ</string>
     <string name="model_remove">ಉಳಿಸಿದ ಮಾದರಿ ತೆಗೆದುಹಾಕಿ</string>
