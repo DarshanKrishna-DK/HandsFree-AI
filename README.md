@@ -63,6 +63,8 @@ Review consequential actions. Stop whenever you need. Passwords, authentication 
 
 > **Development MVP:** real Android and local-model integration are implemented. Full third-party food-to-cart and hands-free voice acceptance are still being validated. A successful build is not a claim that every app workflow works.
 
+The first stable release is being planned for **phone-only operation with English, Kannada and Hindi**. The laptop setup below describes the current development build. See the [product and release plan](PRODUCT.md), [contribution guide](CONTRIBUTING.md), [privacy notes](PRIVACY.md) and [security policy](SECURITY.md).
+
 ## How it works
 
 <img src="assets/agent-loop.svg" width="100%" alt="Animated illustration of Observe, Reason, Act, Verify, Repeat" />
