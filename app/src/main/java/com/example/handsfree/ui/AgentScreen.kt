@@ -62,6 +62,7 @@ fun AgentScreen(modifier: Modifier = Modifier) {
     var answer by rememberSaveable { mutableStateOf("") }
     var settings by remember { mutableStateOf(false) }
     var diagnostics by remember { mutableStateOf(false) }
+    var modelSetup by remember { mutableStateOf(false) }
     var disclose by remember { mutableStateOf(false) }
     var voiceDisclosure by remember { mutableStateOf(false) }
     var voiceAction by remember { mutableStateOf("record") }
@@ -238,9 +239,11 @@ fun AgentScreen(modifier: Modifier = Modifier) {
             if (controller.running) Text(context.uiText(R.string.language_locked), style = MaterialTheme.typography.bodySmall)
             Text(if (service != null) context.uiText(R.string.screen_on) else context.uiText(R.string.screen_needed))
             TextButton(onClick = { settings = false; disclose = true }) { Text(context.uiText(R.string.screen_settings)) }
+            TextButton(enabled = !controller.running && !voice.sessionActive, onClick = { settings = false; modelSetup = true }) { Text(context.uiText(R.string.model_setup)) }
             if (BuildConfig.DEBUG) TextButton(onClick = { settings = false; diagnostics = true }) { Text(context.uiText(R.string.developer_tools)) }
         }
     }, confirmButton = { TextButton(onClick = { settings = false }) { Text(context.uiText(R.string.done)) } })
+    if (modelSetup) ModelSetupDialog(onClose = { modelSetup = false })
     if (disclose) AlertDialog(onDismissRequest = { disclose = false }, title = { Text(context.uiText(R.string.allow_screen)) },
         text = { Text(context.uiText(R.string.screen_disclosure)) },
         confirmButton = { TextButton(onClick = { disclose = false; context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) { Text(context.uiText(R.string.open_settings)) } },

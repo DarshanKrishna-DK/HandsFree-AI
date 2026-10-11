@@ -1,0 +1,14 @@
+<resources>
+    <string name="model_setup">ಈ ಫೋನ್‌ನಲ್ಲಿ ಸಿದ್ಧಪಡಿಸಿ</string>
+    <string name="model_setup_description">ಮುಂದೆ ಫೋನ್‌ನಲ್ಲೇ ಕಾರ್ಯನಿರ್ವಹಿಸಲು ಪರಿಶೀಲಿಸಿದ ಮಾದರಿಯನ್ನು ಸಿದ್ಧಪಡಿಸಿ. ಈ ಅಭಿವೃದ್ಧಿ ಆವೃತ್ತಿಯ ಕಾರ್ಯಗಳಿಗೆ ಇನ್ನೂ ಲ್ಯಾಪ್‌ಟಾಪ್ ಬೇಕು.</string>
+    <string name="model_size">ಡೌನ್‌ಲೋಡ್: 2.59 GB. ಆಮದು ಮಾಡಲು ಕನಿಷ್ಠ 3 GB ಖಾಲಿ ಜಾಗ ಮತ್ತು ಡೌನ್‌ಲೋಡ್ ಪ್ರತಿಗೆ ಜಾಗ ಇರಲಿ. ಫೈಲ್ ಖಾಸಗಿಯಾಗಿ ಉಳಿಯುತ್ತದೆ; ಬ್ಯಾಕಪ್ ಆಗುವುದಿಲ್ಲ.</string>
+    <string name="model_checking">ಉಳಿಸಿದ ಫೈಲ್ ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="model_importing">ಫೈಲ್ ನಕಲಿಸಿ ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="model_verified">ಮಾದರಿ ಫೈಲ್ ಪರಿಶೀಲಿಸಲಾಗಿದೆ. ಫೋನ್‌ನಲ್ಲೇ ಕಾರ್ಯ ನಿರ್ವಹಿಸುವ ಸೌಲಭ್ಯ ಇನ್ನೂ ಅಭಿವೃದ್ಧಿಯಲ್ಲಿದೆ.</string>
+    <string name="model_missing">ಪರಿಶೀಲಿಸಿದ ಮಾದರಿ ಇನ್ನೂ ಉಳಿಸಿಲ್ಲ.</string>
+    <string name="model_import_failed">ಈ ಫೈಲ್ ಪರಿಶೀಲಿಸಲು ಆಗಲಿಲ್ಲ. ಸೂಚಿಸಿದ ಫೈಲ್ ಬಳಸಿ, ಖಾಲಿ ಜಾಗ ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ. ಹಿಂದಿನ ಮಾದರಿಯನ್ನು ಉಳಿಸಲಾಗಿದೆ.</string>
+    <string name="model_source">ಮಾದರಿ ಡೌನ್‌ಲೋಡ್ ಪುಟ ತೆರೆಯಿರಿ</string>
+    <string name="model_import">ಡೌನ್‌ಲೋಡ್ ಮಾಡಿದ ಮಾದರಿ ಆರಿಸಿ</string>
+    <string name="model_remove">ಉಳಿಸಿದ ಮಾದರಿ ತೆಗೆದುಹಾಕಿ</string>
+    <string name="model_remove_confirm">ಜಾಗ ಖಾಲಿ ಮಾಡಲು ಖಾಸಗಿ ಮಾದರಿ ಪ್ರತಿಯನ್ನು ತೆಗೆದುಹಾಕಬೇಕೇ? ಮೂಲ ಡೌನ್‌ಲೋಡ್ ಫೈಲ್ಸ್‌ನಲ್ಲಿ ಉಳಿಯುತ್ತದೆ.</string>
+</resources>
