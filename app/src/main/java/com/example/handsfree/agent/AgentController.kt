@@ -27,6 +27,7 @@ class AgentController(private val context: Context) {
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val backend = BackendClient()
+    private val planner: ActionPlanner = backend
     private val discovery = AppDiscoveryManager(context)
     private val policy = SafetyPolicyEngine()
     private var job: Job? = null
@@ -299,7 +300,7 @@ class AgentController(private val context: Context) {
                     }
                     update(AgentStatus.PLANNING, context.uiText(R.string.planning))
                     val plannedRevision = voiceRevision
-                    val action = try { backend.nextAction(taskId, goal, before, apps, history, constraints, AppLanguage.code(context)) }
+                    val action = try { planner.nextAction(PlannerRequest(taskId, goal, before, apps, history, constraints, AppLanguage.code(context))) }
                     catch (cancelled: CancellationException) { throw cancelled }
                     catch (error: Exception) {
                         record("planning_failed", error.message ?: "Invalid model response")
